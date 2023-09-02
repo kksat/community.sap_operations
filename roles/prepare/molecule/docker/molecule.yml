@@ -1,0 +1,23 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: centos7
+    image: quay.io/centos/centos:centos7
+    pre_build_image: true
+  - name: stream8
+    image: quay.io/centos/centos:stream8
+    pre_build_image: true
+  - name: stream9
+    image: quay.io/centos/centos:stream9
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ../default/converge.yml
+    verify: ../default/verify.yml
+verifier:
+  name: ansible

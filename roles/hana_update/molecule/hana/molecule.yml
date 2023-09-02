@@ -1,0 +1,16 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: delegated
+platforms:
+  - name: hana1
+    resource_group: SAP_HANA_upgrade
+    address: hana1a.germanywestcentral.cloudapp.azure.com
+    user: azureuser
+    port: 22
+    identity_file: "~/.ssh/id_rsa"
+provisioner:
+  name: ansible
+verifier:
+  name: ansible

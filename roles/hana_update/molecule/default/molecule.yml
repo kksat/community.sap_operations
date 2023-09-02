@@ -1,0 +1,58 @@
+---
+dependency:
+  name: shell
+  command: |
+    ansible-galaxy install -r $MOLECULE_SCENARIO_DIRECTORY/requirements.yml
+    pip install -r ~/.ansible/collections/ansible_collections/azure/azcollection/requirements-azure.txt
+
+driver:
+  name: molecule-driver-azure
+
+platforms:
+  - name: hana-update
+    resourcegroup_name: molecule
+    location: northeurope
+    vm_size: Standard_D8s_v3
+    marketplace_image:
+      publisher: "RedHat"
+      offer: "RHEL-SAP-HA"
+      sku: "86sapha-gen2"
+      version: "latest"
+    data_disks:
+      - lun: 0
+        path: /hana
+        filesystem: xfs
+        disk_size_gb: 256
+        storage_account_type: Premium_LRS
+
+scenario:
+  dependency_sequence:
+    - dependency
+  create_sequence:
+    - create
+  converge_sequence:
+    - converge
+  test_sequence:
+    - dependency
+    - create
+    - converge
+    - idempotence
+    - verify
+    - destroy
+  destroy_sequence:
+    - destroy
+  side_effect_sequence:
+    - side_effect hdb_versions.yml
+
+provisioner:
+  name: ansible
+  playbooks:
+    create: create.yml
+    prepare: prepare.yml
+    converge: converge.yml
+    side-effect: side_effect.yml
+    verify: verify.yml
+    destroy: destroy.yml
+
+verifier:
+  name: ansible

@@ -1,0 +1,9 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure container has required packages
+      ansible.builtin.package:
+        name:
+          - sudo

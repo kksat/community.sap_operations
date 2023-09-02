@@ -1,0 +1,46 @@
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: Download SAP software
+      ansible.builtin.command:
+        cmd: "wget --content-disposition --auth-no-challenge --no-check-certificate --user={{ lookup('ansible.builtin.env', 'SAP_SUPPORT_DOWNLOAD_USERNAME') }} --password {{ lookup('ansible.builtin.env', 'SAP_SUPPORT_DOWNLOAD_PASSWORD') }} {{ item }}"
+        chdir: /usr/sap
+      loop:
+        - https://softwaredownloads.sap.com/file/0020000000098642022
+        - https://softwaredownloads.sap.com/file/0030000000103162022
+        - https://softwaredownloads.sap.com/file/0030000001159142022
+        # - https://softwaredownloads.sap.com/file/0020000001275092022
+        - https://softwaredownloads.sap.com/file/0020000000098642022
+        - https://softwaredownloads.sap.com/file/0020000000919882022
+        - https://softwaredownloads.sap.com/file/0020000001100332022
+      become: true
+      become_user: root
+      no_log: true
+
+    - name: Create /usr/sap dir
+      ansible.builtin.file:
+        path: /usr/sap
+        state: directory
+        mode: '0777'
+      become: true
+      become_user: root
+
+    - name: Create /usr/sap/sapcar dir
+      ansible.builtin.file:
+        path: /usr/sap/sapcar
+        state: directory
+        mode: '0777'
+      become: true
+      become_user: root
+
+    - name: Install SAPCAR
+      ansible.builtin.copy:
+        scr: /usr/sap/SAPCAR_1115-70006178.EXE
+        remote_src: true
+        dest: /usr/sap/sapcar/sapcar
+        mode: '0755'
+        owner: root
+        group: root
+      become: true
+      become_user: root

@@ -1,0 +1,118 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  become_user: root
+  vars:
+    master_password: "{{ lookup('env','CAL_SAP_COM_MASTER_PASSWORD') }}"
+    hana_install_medium: /hana/software/HANASP05
+    hana_install_medium_updated: /hana/software/HANASP06
+    software: /hana/software
+
+  tasks:
+    - name: Collect stats for /usr/sap/HAN
+      ansible.builtin.stat:
+        path: /usr/sap/HAN
+      register: _
+
+    - name: Stop playbook if /usr/sap/HAN exists
+      ansible.builtin.meta: end_play
+      when: _.stat.exists
+
+    - name: Install required packages
+      ansible.builtin.package:
+        name:
+          - ansible
+          - rhel-system-roles-sap
+        state: latest
+
+    - name: Run playbooks
+      ansible.builtin.shell:
+        cmd: |
+          cat <<EOF > preparelocalhost.yaml
+          ---
+          - name: Apply SAP Ansible roles to localhost
+            gather_facts: true
+            hosts: localhost
+            become: true
+            become_user: root
+            roles:
+              - redhat.sap_install.sap_general_preconfigure
+              - redhat.sap_install.sap_hana_preconfigure
+          EOF
+          ansible-playbook preparelocalhost.yaml
+      ignore_errors: true
+
+    - name: Reboot
+      ansible.builtin.reboot:
+
+    - name: Make software folder
+      ansible.builtin.file:
+        name: "{{ software }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download SAP HANA archive
+      ansible.builtin.command:
+        cmd: "wget --content-disposition --auth-no-challenge --no-check-certificate --user={{ lookup('ansible.builtin.env', 'SAP_SUPPORT_DOWNLOAD_USERNAME') }} --password {{ lookup('ansible.builtin.env', 'SAP_SUPPORT_DOWNLOAD_PASSWORD') }} {{ item }}"
+        chdir: "{{ software }}"
+      loop:
+        - https://softwaredownloads.sap.com/file/0020000000098642022  # SAPCAR_1115-70006178.EXE
+        - https://softwaredownloads.sap.com/file/0030000000139442023  # 51056441.ZIP SAP HANA Platform Edt. 2.0 SPS05 rev59.05 Linux x86_64
+        - https://softwaredownloads.sap.com/file/0030000000130632023  # 51056431.ZIP SAP HANA Platform Edt. 2.0 SPS06 rev65 Linux x86_64
+
+    - name: Create /usr/sap/sapcar dir
+      ansible.builtin.file:
+        path: /usr/sap/sapcar
+        state: directory
+        mode: '0755'
+
+    - name: Install SAPCAR
+      ansible.builtin.copy:
+        src: "{{ software }}/SAPCAR_1115-70006178.EXE"
+        dest: /usr/sap/sapcar/sapcar
+        remote_src: true
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Unpack SAP HANA archive
+      ansible.builtin.include_role:
+        name: community.sap_operations.unpack
+      vars:
+        unpack_source: "{{ software }}/51056441.ZIP"
+        unpack_destination: "{{ hana_install_medium }}"
+
+    - name: Create HANA install configuration file from template
+      ansible.builtin.template:
+        src: hdblcm.cfg.j2
+        dest: "~/hdblcm.cfg"
+        owner: root
+        group: root
+        mode: '0400'
+      become: true
+      become_user: root
+      register: hana_install_cfg
+
+    - name: Prepare hdblcm.cfg.xml from template
+      ansible.builtin.template:
+        src: hdblcm.cfg.xml.j2
+        dest: "~/hdblcm.cfg.xml"
+        owner: root
+        group: root
+        mode: '0400'
+      become: true
+      become_user: root
+      register: hana_install_hdb_passwords
+
+    - name: Start HANA installation
+      ansible.builtin.shell:
+        cmd: "cat {{ hana_install_hdb_passwords.dest }} | {{ hana_install_medium }}/DATA_UNITS/HDB_SERVER_LINUX_X86_64/hdblcm --configfile={{ hana_install_cfg.dest }} --read_password_from_stdin=xml --batch"
+
+    - name: Unpack SAP HANA updated archive
+      ansible.builtin.include_role:
+        name: community.sap_operations.unpack
+      vars:
+        unpack_source: "{{ software }}/51056431.ZIP"
+        unpack_destination: "{{ hana_install_medium_updated }}"

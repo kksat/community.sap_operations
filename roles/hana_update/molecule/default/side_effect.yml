@@ -1,0 +1,42 @@
+---
+#
+# Copyright 2022 Red Hat inc. Project Atmoshere
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+
+# - name: Create
+#   ansible.builtin.import_playbook: molecule.driver.azure_side_effect
+
+- name: Check hdb_versions tasks
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Include hdb_version.yml
+      ansible.builtin.include_role:
+        name: hana_update
+        tasks_from: hdb_version.yml
+      vars:
+        hana_update_sid: HAN
+        hana_update_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_sapadm_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_system_user_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_root_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_component_medium: /hana/software/HANASP06
+        hana_update_options:
+          prepare_update: false
+          components: server
+          install_hostagent: false
+          check_only: false
+          verify_signature: true
+          update_execution_mode: standard
+          configure_python: python3
+          scope: system
+          hdb_installer_trace_file: "/tmp/hdb_installer_trace_file.trc"

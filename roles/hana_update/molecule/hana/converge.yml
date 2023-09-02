@@ -1,0 +1,96 @@
+---
+# - name: Preconfigure
+#   hosts: all
+#   gather_facts: true
+#   become: true
+#   become_user: root
+#   roles:
+#     - redhat.sap_install.sap_general_preconfigure
+#     - redhat.sap_install.sap_hana_preconfigure
+
+# - name: Assert preconfigure
+#   hosts: all
+#   gather_facts: true
+#   become: true
+#   become_user: root
+#   vars:
+#     sap_general_preconfigure_assert: true
+#     sap_hana_preconfigure_assert: true
+#   roles:
+#     - redhat.sap_install.sap_general_preconfigure
+#     - redhat.sap_install.sap_hana_preconfigure
+
+# TODO: we should not ship molecule and other testing code with collection. Should we?
+
+- name: Converge
+  hosts: all
+  gather_facts: false
+  tasks:
+
+    # - name: Apply sap_general_preconfigure
+    #     redhat.sap_install.sap_general_preconfigure
+    #     become: true
+    #     become_user: root
+
+    # - name: Apply sap_hana_preconfigure
+    #   ansible.builtin.include_role:
+    #     name: redhat.sap_install.sap_hana_preconfigure
+    #     become: true
+    #     become_user: root
+
+    # - name: Assert sap_general_preconfigure
+    #   ansible.builtin.include_role:
+    #     name: redhat.sap_install.sap_general_preconfigure
+    #   vars:
+    #     sap_general_preconfigure_assert: true
+    #     become: true
+    #     become_user: root
+
+    # - name: Assert sap_hana_preconfigure
+    #   ansible.builtin.include_role:
+    #     name: redhat.sap_install.sap_hana_preconfigure
+    #   vars:
+    #     sap_hana_preconfigure_assert: true
+    #     become: true
+    #     become_user: root
+
+    # - name: "Include hana_update"
+    #   ansible.builtin.include_role:
+    #     name: "hana_update"
+    #     tasks_from: hdb_version.yml
+    #   vars:
+    #     hana_update_sid: HAN
+    #     hana_update_component_medium: /software/HANAsp06
+
+    - name: "Include hana_update"
+      ansible.builtin.include_role:
+        name: "hana_update"
+      vars:
+        hana_update_sid: HAN
+        # TODO: check global naming convention for sid variable, will hana_update_sid fit into that convention?
+        hana_update_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_sapadm_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_system_user_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_root_password: "{{ lookup('ansible.builtin.env', 'CAL_SAP_COM_MASTER_PASSWORD') }}"
+        hana_update_component_medium: /hana/software/HANAsp06
+        hana_update_cleanup: false
+        hana_update_options:
+          prepare_update: false
+          components: server
+          install_hostagent: false
+          check_only: false
+          verify_signature: true
+          update_execution_mode: standard
+          configure_python: python3
+          scope: system
+          hdb_installer_trace_file: "/tmp/hdb_installer_trace_file.trc"
+          # TODO: hdb_installer_trace_file parameter still does not work
+          # component_dirs:
+          #   - /hana/software/HANAsp06
+          #   - /hana/data
+          # ignore:
+          #   - check_busy_files
+          #   - check_diskspace
+          # TODO: test that parameter hdb_installer_trace_file works correctly
+
+          # TODO: should DB be started or stopped when update starts? check that condition
